@@ -9,6 +9,8 @@
 	// the same question in every application.
 	type Props = {
 		user: UserSummary;
+		/** True while the session has not been read yet - see the style block below. */
+		pending?: boolean;
 		onSignOut?: () => void;
 		items?: Snippet;
 		/** Organizations the account belongs to. Fewer than two hides the picker. */
@@ -19,6 +21,7 @@
 
 	let {
 		user,
+		pending = false,
 		onSignOut,
 		items,
 		organizations = [],
@@ -57,7 +60,15 @@
 			{#if user.avatarUrl}
 				<Avatar.Image src={user.avatarUrl} alt={user.name} class="size-full object-cover" />
 			{/if}
-			<Avatar.Fallback>{initials}</Avatar.Fallback>
+			<Avatar.Fallback>
+				{#if pending}
+					<!-- Nothing is known yet. The letters come from CSS so the pre-paint
+						 script in app.html can fill them in before the bundle runs. -->
+					<span class="stored-initials" aria-hidden="true"></span>
+				{:else}
+					{initials}
+				{/if}
+			</Avatar.Fallback>
 		</Avatar.Root>
 	</DropdownMenu.Trigger>
 
@@ -112,10 +123,10 @@
 							onValueChange={(next) => onOrganizationChange?.(next)}
 						>
 							{#each organizations as organization (organization.id)}
-								{@const pending = organization.ready === false}
+								{@const unavailable = organization.ready === false}
 								<DropdownMenu.RadioItem
 									value={organization.id}
-									disabled={pending}
+									disabled={unavailable}
 									class="{ITEM} data-disabled:pointer-events-none data-disabled:opacity-50"
 								>
 									{#snippet children({ checked })}
@@ -141,7 +152,7 @@
 
 										<span class="min-w-0 flex-1 truncate">{organization.name}</span>
 
-										{#if pending}
+										{#if unavailable}
 											<span
 												class="bg-muted text-muted-foreground shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
 											>
@@ -169,3 +180,15 @@
 		</DropdownMenu.Content>
 	</DropdownMenu.Portal>
 </DropdownMenu.Root>
+
+<style>
+	/*
+		The application's pre-paint script copies the stored initials into
+		--nixxis-initials, already quoted, exactly as it restores the palette. That
+		happens before the first paint, so the right person is shown from the very
+		first frame; the value is dropped once Svelte renders the real text.
+	*/
+	.stored-initials::after {
+		content: var(--nixxis-initials, '');
+	}
+</style>

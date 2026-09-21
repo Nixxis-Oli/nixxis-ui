@@ -47,9 +47,14 @@
 	// Who is signed in is a cross-application question, like the theme: the
 	// answer is held once, in the package, so the avatar cannot differ between
 	// two applications showing the same person.
-	$effect(() => {
-		session.hydrate(user);
-	});
+	//
+	// Read during setup rather than from an effect. An effect runs after the
+	// browser has already painted, so the default account would be visible for a
+	// frame before being replaced.
+	// Reading the initial value is the intent: the session is resolved once, and
+	// `user` is only the default to fall back on.
+	// svelte-ignore state_referenced_locally
+	session.hydrate(user);
 
 	function signOut() {
 		session.signOut();
@@ -69,6 +74,7 @@
 	<AppSwitcher {apps} {currentAppId} />
 	<UserMenu
 		user={session.user ?? user}
+		pending={!session.ready}
 		onSignOut={signOut}
 		{organizations}
 		{currentOrganizationId}

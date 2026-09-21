@@ -16,19 +16,31 @@ const USER_KEY = 'nixxis-user';
 class SharedSession {
 	user = $state<UserSummary | null>(null);
 
+	/**
+	 * False until storage has been read. The prerendered HTML is built without a
+	 * browser, so it must not claim an identity it cannot know - otherwise the
+	 * first paint shows the default account and swaps it once the bundle runs.
+	 */
+	ready = $state(false);
+
 	// Reading storage yields a fresh object every time. Callers live inside
 	// effects, so the store must settle after the first read or the new identity
 	// on each pass keeps waking whatever depends on it.
 	private loaded = false;
 
-	/** Called once by ToolbarActions, with the account to show when none is stored. */
+	/**
+	 * Called by ToolbarActions while it sets up - not from an effect, so that the
+	 * first client-side render already knows who is signed in. On the server there
+	 * is no storage to read and the session stays unresolved.
+	 */
 	hydrate(fallback: UserSummary) {
-		if (this.loaded) {
+		if (this.loaded || typeof localStorage === 'undefined') {
 			return;
 		}
 
 		this.loaded = true;
 		this.user = this.read() ?? fallback;
+		this.ready = true;
 	}
 
 	/**
@@ -42,12 +54,14 @@ class SharedSession {
 
 		this.loaded = true;
 		this.user = stored;
+		this.ready = true;
 
 		return stored;
 	}
 
 	signIn(user: UserSummary) {
 		this.loaded = true;
+		this.ready = true;
 		this.user = user;
 
 		try {
@@ -59,6 +73,7 @@ class SharedSession {
 
 	signOut() {
 		this.loaded = true;
+		this.ready = true;
 		this.user = null;
 
 		try {
