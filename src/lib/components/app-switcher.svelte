@@ -52,14 +52,20 @@
 				<ul>
 					{#each apps as app (app.id)}
 						{@const current = app.id === currentAppId}
+						{@const pending = app.ready === false}
 						<li>
-							<a
-								href={app.href}
+							<svelte:element
+								this={pending ? 'div' : 'a'}
+								href={pending ? undefined : app.href}
 								aria-current={current ? 'page' : undefined}
-								class="hover:bg-accent focus-visible:ring-ring flex items-start gap-3 rounded-lg p-2.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+								class="focus-visible:ring-ring flex items-start gap-3 rounded-lg p-2.5 transition-colors focus-visible:ring-2 focus-visible:outline-none {pending
+									? 'cursor-default'
+									: 'hover:bg-accent'}"
 							>
 								<span
-									class="flex size-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-white"
+									class="flex size-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-white {pending
+										? 'opacity-45'
+										: ''}"
 									style:background-color={app.color ?? 'var(--primary)'}
 								>
 									{app.initials ?? app.name.slice(0, 2).toUpperCase()}
@@ -67,7 +73,12 @@
 
 								<span class="min-w-0 flex-1">
 									<span class="flex items-center gap-2">
-										<span class="truncate text-sm font-medium">{app.name}</span>
+										<span
+											class="truncate text-sm font-medium {pending ? 'text-muted-foreground' : ''}"
+										>
+											{app.name}
+										</span>
+
 										{#if current}
 											<!-- Spelled out rather than coloured: the current entry has to
 												 read as current without relying on hue. -->
@@ -75,6 +86,12 @@
 												class="bg-secondary text-secondary-foreground shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
 											>
 												Current
+											</span>
+										{:else if pending}
+											<span
+												class="bg-muted text-muted-foreground shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+											>
+												soon
 											</span>
 										{/if}
 									</span>
@@ -85,7 +102,7 @@
 										</span>
 									{/if}
 								</span>
-							</a>
+							</svelte:element>
 						</li>
 					{/each}
 				</ul>

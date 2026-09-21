@@ -9,6 +9,18 @@ export interface AppEntry {
 	/** Any CSS colour for the tile background. Falls back to the host's primary. */
 	color?: string;
 	description?: string;
+	/**
+	 * False marks an application that is announced but not built yet. The switcher
+	 * shows it, flagged, rather than hiding it - people ask where it went.
+	 */
+	ready?: boolean;
+}
+
+export interface OrganizationEntry {
+	id: string;
+	name: string;
+	/** False for an organization the account can see but not enter yet. */
+	ready?: boolean;
 }
 
 export interface UserSummary {

@@ -1,18 +1,30 @@
 <script lang="ts">
 	import { Avatar, DropdownMenu } from 'bits-ui';
 	import type { Snippet } from 'svelte';
-	import type { UserSummary } from '../types.js';
+	import type { OrganizationEntry, UserSummary } from '../types.js';
 
 	// The avatar at the far right, with whatever the host application wants to put
 	// in its menu. `items` is a snippet so the package does not have to know about
-	// the entries - only sign-out is offered directly, being universal.
+	// the entries; the organization picker and sign-out are here because they are
+	// the same question in every application.
 	type Props = {
 		user: UserSummary;
 		onSignOut?: () => void;
 		items?: Snippet;
+		/** Organizations the account belongs to. Fewer than two hides the picker. */
+		organizations?: OrganizationEntry[];
+		currentOrganizationId?: string;
+		onOrganizationChange?: (id: string) => void;
 	};
 
-	let { user, onSignOut, items }: Props = $props();
+	let {
+		user,
+		onSignOut,
+		items,
+		organizations = [],
+		currentOrganizationId,
+		onOrganizationChange
+	}: Props = $props();
 
 	const initials = $derived(
 		user.name
@@ -22,6 +34,16 @@
 			.join('')
 			.toUpperCase() || '?'
 	);
+
+	const currentOrganization = $derived(
+		organizations.find((entry) => entry.id === currentOrganizationId)
+	);
+
+	// A submenu rather than a Select: a listbox portalled out of an open menu
+	// fights it for outside-click and focus. The submenu is the pattern menus
+	// already have for "pick one of these".
+	const ITEM =
+		'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground flex cursor-default items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none select-none';
 </script>
 
 <DropdownMenu.Root>
@@ -53,20 +75,97 @@
 				{/if}
 			</div>
 
+			{#if organizations.length}
+				<DropdownMenu.Separator class="bg-border -mx-1 my-1 h-px" />
+
+				<DropdownMenu.Sub>
+					<DropdownMenu.SubTrigger class={ITEM}>
+						<span class="min-w-0 flex-1">
+							<span class="text-muted-foreground block text-[10px] tracking-wider uppercase">
+								Organization
+							</span>
+							<span class="block truncate">{currentOrganization?.name ?? 'Choose...'}</span>
+						</span>
+
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="text-muted-foreground shrink-0"
+							aria-hidden="true"
+						>
+							<path d="m9 18 6-6-6-6" />
+						</svg>
+					</DropdownMenu.SubTrigger>
+
+					<DropdownMenu.SubContent
+						sideOffset={8}
+						class="bg-popover text-popover-foreground z-50 w-56 rounded-lg border p-1 shadow-lg"
+					>
+						<DropdownMenu.RadioGroup
+							value={currentOrganizationId}
+							onValueChange={(next) => onOrganizationChange?.(next)}
+						>
+							{#each organizations as organization (organization.id)}
+								{@const pending = organization.ready === false}
+								<DropdownMenu.RadioItem
+									value={organization.id}
+									disabled={pending}
+									class="{ITEM} data-disabled:pointer-events-none data-disabled:opacity-50"
+								>
+									{#snippet children({ checked })}
+										<!-- The check is the state, not the highlight: a menu row is
+											 highlighted merely by being hovered. -->
+										<span class="flex size-4 shrink-0 items-center justify-center">
+											{#if checked}
+												<svg
+													width="14"
+													height="14"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2.5"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													aria-hidden="true"
+												>
+													<path d="M20 6 9 17l-5-5" />
+												</svg>
+											{/if}
+										</span>
+
+										<span class="min-w-0 flex-1 truncate">{organization.name}</span>
+
+										{#if pending}
+											<span
+												class="bg-muted text-muted-foreground shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+											>
+												soon
+											</span>
+										{/if}
+									{/snippet}
+								</DropdownMenu.RadioItem>
+							{/each}
+						</DropdownMenu.RadioGroup>
+					</DropdownMenu.SubContent>
+				</DropdownMenu.Sub>
+			{/if}
+
 			{#if items}
 				<DropdownMenu.Separator class="bg-border -mx-1 my-1 h-px" />
 				{@render items()}
 			{/if}
 
-			{#if onSignOut}
-				<DropdownMenu.Separator class="bg-border -mx-1 my-1 h-px" />
-				<DropdownMenu.Item
-					onSelect={onSignOut}
-					class="data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground cursor-default rounded-sm px-3 py-2 text-sm outline-none select-none"
-				>
-					Sign out
-				</DropdownMenu.Item>
-			{/if}
+			<!-- Always present. An account menu that offers no way out in one
+				 application and does in another is the same menu behaving differently,
+				 which is exactly what a shared component exists to prevent. -->
+			<DropdownMenu.Separator class="bg-border -mx-1 my-1 h-px" />
+			<DropdownMenu.Item onSelect={() => onSignOut?.()} class={ITEM}>Sign out</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</DropdownMenu.Portal>
 </DropdownMenu.Root>

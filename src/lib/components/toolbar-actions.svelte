@@ -3,7 +3,7 @@
 	import AppSwitcher from './app-switcher.svelte';
 	import SettingsPanel from './settings-panel.svelte';
 	import UserMenu from './user-menu.svelte';
-	import type { AppEntry, UserSummary } from '../types.js';
+	import type { AppEntry, OrganizationEntry, UserSummary } from '../types.js';
 	import type { PaletteOption } from '../theme.svelte.js';
 
 	// The right-hand end of a toolbar, and only that: the application owns the
@@ -17,6 +17,10 @@
 		/** Palettes the settings panel offers. The application's CSS defines them. */
 		palettes?: PaletteOption[];
 		onSignOut?: () => void;
+		/** Organizations the account belongs to, for the picker in the menu. */
+		organizations?: OrganizationEntry[];
+		currentOrganizationId?: string;
+		onOrganizationChange?: (id: string) => void;
 		/** Extra entries for the account menu. */
 		menuItems?: Snippet;
 		/** Anything the application wants between its own content and this cluster. */
@@ -30,6 +34,9 @@
 		currentAppId,
 		palettes = [],
 		onSignOut,
+		organizations = [],
+		currentOrganizationId,
+		onOrganizationChange,
 		menuItems,
 		before,
 		class: className = ''
@@ -46,5 +53,12 @@
 	{/if}
 
 	<AppSwitcher {apps} {currentAppId} />
-	<UserMenu {user} {onSignOut} items={menuItems} />
+	<UserMenu
+		{user}
+		{onSignOut}
+		{organizations}
+		{currentOrganizationId}
+		{onOrganizationChange}
+		items={menuItems}
+	/>
 </div>
