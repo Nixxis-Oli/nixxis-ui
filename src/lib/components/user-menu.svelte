@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Avatar, DropdownMenu } from 'bits-ui';
 	import type { Snippet } from 'svelte';
+	import { roomForSubmenu } from '../media.svelte.js';
 	import type { OrganizationEntry, UserSummary } from '../types.js';
 
 	// The avatar at the far right, with whatever the host application wants to put
@@ -44,10 +45,70 @@
 
 	// A submenu rather than a Select: a listbox portalled out of an open menu
 	// fights it for outside-click and focus. The submenu is the pattern menus
-	// already have for "pick one of these".
+	// already have for "pick one of these" - as long as there is room beside the
+	// menu to put it, which is what `roomForSubmenu` answers.
 	const ITEM =
 		'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground flex cursor-default items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none select-none';
 </script>
+
+<!-- The choices themselves. Both shapes below render this, so neither can drift
+	 from the other; only the heading differs, because the flyout already has one
+	 on its trigger. -->
+{#snippet organizationChoices(heading = false)}
+	<DropdownMenu.RadioGroup
+		value={currentOrganizationId}
+		onValueChange={(next) => onOrganizationChange?.(next)}
+	>
+		{#if heading}
+			<DropdownMenu.GroupHeading
+				class="text-muted-foreground px-3 pt-2 pb-1 text-[10px] tracking-wider uppercase"
+			>
+				Organization
+			</DropdownMenu.GroupHeading>
+		{/if}
+
+		{#each organizations as organization (organization.id)}
+			{@const unavailable = organization.ready === false}
+			<DropdownMenu.RadioItem
+				value={organization.id}
+				disabled={unavailable}
+				class="{ITEM} data-disabled:pointer-events-none data-disabled:opacity-50"
+			>
+				{#snippet children({ checked })}
+					<!-- The check is the state, not the highlight: a menu row is
+						 highlighted merely by being hovered. -->
+					<span class="flex size-4 shrink-0 items-center justify-center">
+						{#if checked}
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								aria-hidden="true"
+							>
+								<path d="M20 6 9 17l-5-5" />
+							</svg>
+						{/if}
+					</span>
+
+					<span class="min-w-0 flex-1 truncate">{organization.name}</span>
+
+					{#if unavailable}
+						<span
+							class="bg-muted text-muted-foreground shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+						>
+							soon
+						</span>
+					{/if}
+				{/snippet}
+			</DropdownMenu.RadioItem>
+		{/each}
+	</DropdownMenu.RadioGroup>
+{/snippet}
 
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger
@@ -77,7 +138,7 @@
 			side="bottom"
 			align="end"
 			sideOffset={8}
-			class="bg-popover text-popover-foreground z-50 w-60 rounded-lg border p-1 shadow-lg"
+			class="bg-popover text-popover-foreground z-50 w-60 max-w-[calc(100vw-2rem)] rounded-lg border p-1 shadow-lg"
 		>
 			<div class="px-3 py-2">
 				<p class="truncate text-sm font-medium">{user.name}</p>
@@ -89,82 +150,46 @@
 			{#if organizations.length}
 				<DropdownMenu.Separator class="bg-border -mx-1 my-1 h-px" />
 
-				<DropdownMenu.Sub>
-					<DropdownMenu.SubTrigger class={ITEM}>
-						<span class="min-w-0 flex-1">
-							<span class="text-muted-foreground block text-[10px] tracking-wider uppercase">
-								Organization
+				{#if roomForSubmenu.matches}
+					<DropdownMenu.Sub>
+						<DropdownMenu.SubTrigger class={ITEM}>
+							<span class="min-w-0 flex-1">
+								<span class="text-muted-foreground block text-[10px] tracking-wider uppercase">
+									Organization
+								</span>
+								<span class="block truncate">{currentOrganization?.name ?? 'Choose...'}</span>
 							</span>
-							<span class="block truncate">{currentOrganization?.name ?? 'Choose...'}</span>
-						</span>
 
-						<svg
-							width="14"
-							height="14"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="text-muted-foreground shrink-0"
-							aria-hidden="true"
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="text-muted-foreground shrink-0"
+								aria-hidden="true"
+							>
+								<path d="m9 18 6-6-6-6" />
+							</svg>
+						</DropdownMenu.SubTrigger>
+
+						<DropdownMenu.SubContent
+							sideOffset={8}
+							class="bg-popover text-popover-foreground z-50 w-56 max-w-[calc(100vw-2rem)] rounded-lg border p-1 shadow-lg"
 						>
-							<path d="m9 18 6-6-6-6" />
-						</svg>
-					</DropdownMenu.SubTrigger>
-
-					<DropdownMenu.SubContent
-						sideOffset={8}
-						class="bg-popover text-popover-foreground z-50 w-56 rounded-lg border p-1 shadow-lg"
-					>
-						<DropdownMenu.RadioGroup
-							value={currentOrganizationId}
-							onValueChange={(next) => onOrganizationChange?.(next)}
-						>
-							{#each organizations as organization (organization.id)}
-								{@const unavailable = organization.ready === false}
-								<DropdownMenu.RadioItem
-									value={organization.id}
-									disabled={unavailable}
-									class="{ITEM} data-disabled:pointer-events-none data-disabled:opacity-50"
-								>
-									{#snippet children({ checked })}
-										<!-- The check is the state, not the highlight: a menu row is
-											 highlighted merely by being hovered. -->
-										<span class="flex size-4 shrink-0 items-center justify-center">
-											{#if checked}
-												<svg
-													width="14"
-													height="14"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2.5"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													aria-hidden="true"
-												>
-													<path d="M20 6 9 17l-5-5" />
-												</svg>
-											{/if}
-										</span>
-
-										<span class="min-w-0 flex-1 truncate">{organization.name}</span>
-
-										{#if unavailable}
-											<span
-												class="bg-muted text-muted-foreground shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-											>
-												soon
-											</span>
-										{/if}
-									{/snippet}
-								</DropdownMenu.RadioItem>
-							{/each}
-						</DropdownMenu.RadioGroup>
-					</DropdownMenu.SubContent>
-				</DropdownMenu.Sub>
+							{@render organizationChoices()}
+						</DropdownMenu.SubContent>
+					</DropdownMenu.Sub>
+				{:else}
+					<!-- Too narrow for a flyout: the menu is 15rem, the submenu 14rem, and
+						 neither side of the menu has that much room left. The choices go in
+						 the menu itself instead. The current organization is not repeated on
+						 a line above them - the checked entry already says which one it is. -->
+					{@render organizationChoices(true)}
+				{/if}
 			{/if}
 
 			{#if items}
