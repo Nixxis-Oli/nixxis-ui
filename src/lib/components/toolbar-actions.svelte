@@ -5,6 +5,7 @@
 	import UserMenu from './user-menu.svelte';
 	import type { AppEntry, OrganizationEntry, UserSummary } from '../types.js';
 	import type { PaletteOption } from '../theme.svelte.js';
+	import { session } from '../session.svelte.js';
 
 	// The right-hand end of a toolbar, and only that: the application owns the
 	// rest of the bar. This renders an inline-flex cluster with no width, no
@@ -12,6 +13,7 @@
 	// already has.
 	type Props = {
 		apps: AppEntry[];
+		/** The account to show when no sign-in is stored for this tab. */
 		user: UserSummary;
 		currentAppId?: string;
 		/** Palettes the settings panel offers. The application's CSS defines them. */
@@ -41,6 +43,18 @@
 		before,
 		class: className = ''
 	}: Props = $props();
+
+	// Who is signed in is a cross-application question, like the theme: the
+	// answer is held once, in the package, so the avatar cannot differ between
+	// two applications showing the same person.
+	$effect(() => {
+		session.hydrate(user);
+	});
+
+	function signOut() {
+		session.signOut();
+		onSignOut?.();
+	}
 </script>
 
 <div class="flex items-center gap-1 {className}">
@@ -54,8 +68,8 @@
 
 	<AppSwitcher {apps} {currentAppId} />
 	<UserMenu
-		{user}
-		{onSignOut}
+		user={session.user ?? user}
+		onSignOut={signOut}
 		{organizations}
 		{currentOrganizationId}
 		{onOrganizationChange}
